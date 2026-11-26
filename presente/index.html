@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#FBF3E8" />
+<title>Aquiles GYM · Presente</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@500;800&family=Poppins:wght@800&display=swap" rel="stylesheet" />
+<style>
+  :root{--bg:#FBF3E8;--card:#fff;--card2:#FBF3E8;--line:#F0E3D2;--ink:#2B1B17;--mute:#7A6760;--red:#D93A2F;--red2:#B92A21;--blush:#FCE6DE;--green:#2E8B5E;--amber:#9A6212;--danger:#B92A21}
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Montserrat,system-ui,Arial,sans-serif;font-weight:500;-webkit-font-smoothing:antialiased}
+  body{display:flex;justify-content:center;padding:max(20px,env(safe-area-inset-top)) 18px 40px}
+  main{width:100%;max-width:440px}
+  .logo{display:block;height:68px;margin:6px auto 22px}
+  h1{font-family:'Bebas Neue',Impact,sans-serif;font-weight:400;letter-spacing:.02em;font-size:46px;line-height:1.05;margin:0 0 8px;text-align:center}
+  .sub{color:var(--mute);text-align:center;margin:0 0 20px;font-size:14px}
+  .card{background:var(--card);border-radius:28px;padding:20px;margin-bottom:14px;box-shadow:0 6px 20px #5a2a1a14}
+  .ok{border:2px solid #9FD6B7}
+  .bad{border:2px solid #F4C4BA;background:var(--blush)}
+  .big{font-family:Poppins,sans-serif;font-weight:800;font-size:20px;margin:0 0 4px}
+  .row{color:var(--mute);font-size:14px;margin:2px 0}
+  .row b{color:var(--ink);font-weight:800}
+  .tag{display:inline-block;border-radius:99px;padding:4px 12px;font-size:12px;font-weight:800;margin-bottom:10px;background:#DDF1E6;color:var(--green)}
+  .amber{color:var(--amber);font-weight:800}.danger{color:var(--danger);font-weight:800}
+  .cake{text-align:center;font-size:18px;font-weight:800}
+  label{display:block;font-size:12px;color:var(--mute);margin:0 0 4px 14px}
+  input{width:100%;border:2px solid var(--line);border-radius:99px;padding:13px 18px;background:var(--card2);color:var(--ink);font:inherit;outline:none;margin-bottom:12px}
+  input:focus{border-color:var(--red);background:#fff;box-shadow:0 0 0 4px #D93A2F1f}
+  button,.btn{display:block;width:100%;border:0;border-radius:99px;padding:14px;background:var(--red);color:#fff;font:inherit;font-weight:800;text-align:center;text-decoration:none;cursor:pointer;box-shadow:0 8px 18px #D93A2F3a}
+  .link{display:block;text-align:center;color:var(--mute);font-size:13px;margin-top:14px}
+  .err{background:var(--blush);color:var(--red2);padding:11px 16px;border-radius:18px;margin-bottom:12px;font-size:14px}
+  .spin{text-align:center;color:var(--mute);padding:40px 0}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="logo.png" alt="Aquiles GYM" />
+  <div id="app"><div class="spin">Un momento…</div></div>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+(function () {
+  var SB = 'https://cwlliaswhntqghsbmcqb.supabase.co', KEY = 'sb_publishable_MPZDNiB-U8UZNUctrW21Pw_qM8_IcUR';
+  var db = supabase.createClient(SB, KEY, { auth: { storageKey: 'aquiles-presente-auth', persistSession: true, autoRefreshToken: true } });
+  var app = document.getElementById('app');
+  var token = (new URLSearchParams(location.search).get('c') || '').trim();
+  var TZ = 'America/Argentina/Buenos_Aires';
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]; }); };
+  var hora = function (iso) { return new Date(iso).toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: TZ }); };
+  var fecha = function (ymd) { var p = String(ymd).split('-'); return p[2] + '/' + p[1]; };
+
+  function login(msg) {
+    app.innerHTML = '<h1>¡Hola! 💛</h1><p class="sub">Ingresá con tu cuenta para dar tu presente.</p>' + (msg ? '<div class="err">' + esc(msg) + '</div>' : '') +
+      '<form id="f" class="card"><label>Email</label><input id="e" type="email" autocomplete="username" required />' +
+      '<label>Contraseña</label><input id="p" type="password" autocomplete="current-password" required /><button>Dar mi presente</button></form>';
+    document.getElementById('f').onsubmit = async function (ev) {
+      ev.preventDefault();
+      var r = await db.auth.signInWithPassword({ email: document.getElementById('e').value.trim(), password: document.getElementById('p').value });
+      if (r.error) login('No pudimos ingresar: revisá tu email y tu contraseña.'); else run();
+    };
+  }
+
+  function render(r) {
+    var name = esc(r.name || '');
+    var html = '';
+    if (!r.ok && r.tablet) {
+      // Cuota vencida u otro aviso: el detalle se muestra solo en la pantalla de la tablet del gimnasio.
+      app.innerHTML = '<h1>Mirá la pantalla del gimnasio 💛</h1><p class="sub">Ahí te contamos cómo seguir.</p><a class="link" href="/">Ir a la web de socias</a>';
+      return;
+    }
+    if (!r.ok) {
+      html += '<h1>Hola' + (name ? ', ' + name : '') + ' 💛</h1><p class="sub">No pudimos registrar tu presente</p>';
+      html += '<div class="card bad"><p class="big">' + esc(r.reason || 'Probá de nuevo en un momento.') + '</p><p class="row">Si es un error, avisale a tu profe o a recepción.</p></div>';
+    } else {
+      // El saludo (nombre, clase, cuota, cumpleaños) se muestra en la pantalla de la tablet del gimnasio, no acá.
+      html += '<h1>' + (r.ya ? 'Ya diste tu presente hoy ✅' : '¡Listo, presente registrado! ✅') + '</h1>';
+      html += '<p class="sub">Mirá la pantalla del gimnasio: ahí está tu saludo 💛</p>';
+    }
+    if (!r.ok && r.dias_cuota != null) {
+      var d = r.dias_cuota, t, cls = '';
+      if (d > 1) t = 'Tu cuota vence en <b>' + d + ' días</b> (' + fecha(r.vence) + ')';
+      else if (d === 1) t = 'Tu cuota vence <b>mañana</b> (' + fecha(r.vence) + ')';
+      else if (d === 0) t = 'Tu cuota vence <b>hoy</b>';
+      else t = 'Tu cuota venció hace <b>' + (-d) + (d === -1 ? ' día' : ' días') + '</b>. ¡Abonala para seguir entrenando!';
+      if (d <= 3) cls = d < 0 ? 'danger' : 'amber';
+      html += '<div class="card"><p class="row ' + cls + '">' + t + '</p></div>';
+    }
+    html += '<a class="link" href="/">Ir a la web de socias</a>';
+    app.innerHTML = html;
+  }
+
+  async function run() {
+    app.innerHTML = '<div class="spin">Registrando tu presente…</div>';
+    try {
+      var r = await db.rpc('presente_qr', { p_code: 'AQUILES-GYM:' + token });
+      if (r.error) throw new Error(r.error.message);
+      render(r.data);
+    } catch (e) {
+      app.innerHTML = '<h1>Ups 💛</h1><p class="sub">No pudimos conectarnos</p><div class="err">' + esc(e.message || e) + '</div><button onclick="location.reload()">Probar de nuevo</button>';
+    }
+  }
+
+  async function reuseWebSession() {
+    // Si ya está iniciada la sesión en la web de socias (misma dirección), se aprovecha.
+    try {
+      var raw = localStorage.getItem('flutter.sb-cwlliaswhntqghsbmcqb-auth-token') || localStorage.getItem('sb-cwlliaswhntqghsbmcqb-auth-token');
+      if (!raw) return;
+      var v = JSON.parse(raw); if (typeof v === 'string') v = JSON.parse(v);
+      if (v && v.access_token && v.refresh_token) await db.auth.setSession({ access_token: v.access_token, refresh_token: v.refresh_token });
+    } catch (e) { /* sin sesión: se pide el ingreso */ }
+  }
+
+  (async function () {
+    if (!token) { app.innerHTML = '<h1>Hola 💛</h1><p class="sub">Escaneá el código QR que está en el gimnasio para dar tu presente.</p>'; return; }
+    var s = await db.auth.getSession();
+    if (!s.data.session) { await reuseWebSession(); s = await db.auth.getSession(); }
+    if (!s.data.session) login(); else run();
+  })();
+})();
+</script>
+</body>
+</html>
